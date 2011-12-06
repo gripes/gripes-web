@@ -1,0 +1,125 @@
+import org.gradle.plugins.ide.eclipse.model.SourceFolder
+
+apply {
+	plugin 'java'
+	plugin 'groovy'
+	plugin 'eclipse'
+}
+
+logger.quiet "Building Gripes-Web"
+
+group = 'gripes'
+archivesBaseName = 'gripes-web'
+version = '0.1.7'
+
+versions = [
+	'gripes-web' : '0.1.7',
+	'gripes-plugin' : '0.1.7',
+	'gripersist' : '0.1.1',
+	'hibernate-core' : '4.0.0.Beta2'
+]
+
+configurations {
+	provided {  }
+}
+
+repositories {
+    mavenCentral()
+    mavenRepo urls: "http://www.gripes-project.org/libs"
+    mavenRepo name: "jboss-snapshots", urls: "http://snapshots.jboss.org/maven2/"
+}
+
+sourceSets {
+	main {
+		compileClasspath += configurations.provided
+		groovy { srcDir 'src' }
+	    resources { srcDir 'resources' }
+	}
+	test {
+		groovy { srcDir 'test' }
+	    resources { srcDir 'test' }
+	}
+}
+
+configurations {
+	ftpAntTask
+}
+
+dependencies {
+	//** Gradle API
+	provided gradleApi()
+	
+	//** Ant FTP
+	ftpAntTask module("org.apache.ant:ant-commons-net:1.7.0") {
+        module("commons-net:commons-net:1.4.1") {
+            dependencies("oro:oro:2.0.8@jar")
+        }
+    }
+	
+	//** Groovy
+	groovy group: 'org.codehaus.groovy', name: 'groovy', version: '1.8.4'
+	
+	//** Logging
+	provided group: 'org.slf4j', name: 'slf4j-api', version: '1.6.1'
+	provided group: 'ch.qos.logback', name: 'logback-core', version: '0.9.28'
+	provided group: 'ch.qos.logback', name: 'logback-access', version: '0.9.28'
+	provided group: 'ch.qos.logback', name: 'logback-classic', version: '0.9.28'
+	
+	//** Servlet
+	compile group: 'javax.servlet', name: 'servlet-api', version: '2.5'
+	compile group: 'org.mortbay.jetty', name: 'jetty', version: '6.1.26'
+	compile group: 'org.mortbay.jetty', name: 'jetty-util', version: '6.1.26'
+	compile group: 'javax.servlet', name: 'jsp-api', version: '2.0'
+
+	//** Framework
+	compile group: 'net.sourceforge.stripes', name: 'stripes', version: '1.5.6'	
+	
+	//** Database
+	testCompile group: 'org.hsqldb', name: 'hsqldb', version: '2.0.0'
+	compile group: 'org.hibernate', name: 'hibernate-core', version: versions['hibernate-core']
+	compile group: 'org.hibernate', name: 'hibernate-entitymanager', version: versions['hibernate-core']
+	compile group: 'org.hibernate', name: 'hibernate-c3p0', version: versions['hibernate-core']
+	
+	//** Testing
+	testCompile 'junit:junit:4.10'
+
+	compile project(":gripersist")
+	
+	compile name: 'stripesstuff', version: '0.1'
+}
+
+eclipseClasspath {	
+	whenConfigured { classpath ->
+		classpath.entries.add(new SourceFolder("/gripersist","",new LinkedHashSet(),"", new ArrayList(), new ArrayList() ))
+	}
+}
+task eclipseCp(dependsOn: eclipseClasspath) {}
+
+uploadArchives {
+    repositories {
+       flatDir(dirs: file('repos'))
+    }
+}
+uploadArchives.doLast {
+	ant {
+		taskdef(name: 'ftp',
+                classname: 'org.apache.tools.ant.taskdefs.optional.net.FTP',
+                classpath: configurations.ftpAntTask.asPath)
+
+		ftp(action: "mkdir",
+			server: "www.gripes-project.org", 
+			remotedir: "${ftpUploadRoot}/libs/gripes/gripes-web/${version}",
+			chmod: "0755",
+			userid: ftpUploadUser,
+			password: ftpUploadPassword)
+		
+		ftp(action: "put",
+			server: "www.gripes-project.org", 
+			remotedir: "${ftpUploadRoot}/libs/gripes/gripes-web/${version}",
+			chmod: "0755",
+			userid: ftpUploadUser,
+			password: ftpUploadPassword) {
+			fileset(dir:"repos", includes: "*${version}.*")
+		}
+    }
+}
