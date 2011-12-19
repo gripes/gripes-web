@@ -1,16 +1,16 @@
 package net.sf.gripes.util
 
+import java.lang.reflect.Field
+
+import javax.servlet.ServletContextEvent
+import javax.servlet.ServletContextListener
+
 import net.sf.gripes.model.GripesBaseModel
 import net.sf.gripes.util.jetty.*
 import net.sf.gripes.util.tomcat.*
 
-import javax.servlet.ServletContext
-import javax.servlet.ServletContextEvent
-import javax.servlet.ServletContextListener
-
-import org.mortbay.jetty.servlet.FilterMapping
 import org.mortbay.jetty.servlet.FilterHolder
-
+import org.mortbay.jetty.servlet.FilterMapping
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -41,10 +41,6 @@ class GripesContextListener  implements ServletContextListener {
 				if(klass && klass.getAnnotation(javax.persistence.Entity)){
 					GripesBaseModel.crudify(klass)
 					
-					klass.getFields().each {
-						println it.name + " - " + it.annotations
-					}
-					
 					//if (klass.newInstance().properties.mappings) {					
 					//	def builder = Class.forName("net.sf.gripes.entity.builder.GripesEntityBuilder").newInstance(klass)
 					//	klass.newInstance().properties.mappings.setDelegate(builder)
@@ -73,19 +69,16 @@ class GripesContextListener  implements ServletContextListener {
 		gripesConfig.addons.each {
 			def addonName = it
 
-			def addonStartup = this.class.classLoader.getResource("gripes/addons/${addonName}/gripes.startup") ?:
-								this.class.classLoader.getResource("gripes/gripes-addons/${addonName}/gripes.startup")
+			def addonStartup = GripesHelper.findAddonStartup(addonName)
 
 			if(addonStartup) {
-				logger.debug "Running addon startup script: {}", addonStartup
+				logger.debug "Running addon startup script"
 				def shell = new GroovyShell(this.class.classLoader, new Binding([entityPackage: pack]))
-				shell.evaluate(addonStartup.text)
+				shell.evaluate(addonStartup)
 			}
 
-			def addonConfig = this.class.classLoader.getResource("gripes/addons/${addonName}/gripes.addon") ?:
-								this.class.classLoader.getResource("gripes/gripes-addons/${addonName}/gripes.addon")
-
-			logger.debug "Found addon config: {}", addonConfig
+			def addonConfig = GripesHelper.findAddonConfig(addonName)
+								
 			def addon = new ConfigSlurper().parse(addonConfig)
 			addon.filters.each {k,v ->
 				def filterConfig = v

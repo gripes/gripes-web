@@ -19,10 +19,7 @@ class GripesActionResolver extends NameBasedActionResolver {
 		def gripesConfig = new ConfigSlurper().parse(this.class.classLoader.getResource("Config.groovy").text)
 		gripesConfig.addons.each {
 			def addonName = it
-			def addonConfig = this.class.classLoader.getResource("gripes/addons/${addonName}/gripes.addon")
-			if(!addonConfig){
-				addonConfig = this.class.classLoader.getResource("gripes/gripes-addons/${addonName}/gripes.addon")
-			}
+			def addonConfig = GripesHelper.findAddonConfig(addonName)
 			
 			def addon = new ConfigSlurper().parse(addonConfig)
 			addon.actions.each {
