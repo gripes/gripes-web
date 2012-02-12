@@ -25,8 +25,8 @@ configurations {
 
 repositories {
     mavenCentral()
-    mavenRepo urls: "http://www.gripes-project.org/libs"
-    mavenRepo name: "jboss-snapshots", urls: "http://snapshots.jboss.org/maven2/"
+    mavenRepo url: "http://www.gripes-project.org/libs"
+    mavenRepo name: "jboss-snapshots", url: "http://snapshots.jboss.org/maven2/"
 }
 
 sourceSets {
@@ -66,10 +66,10 @@ dependencies {
 	provided group: 'ch.qos.logback', name: 'logback-classic', version: '0.9.28'
 	
 	//** Servlet
-	compile group: 'javax.servlet', name: 'servlet-api', version: '2.5'
-	compile group: 'org.mortbay.jetty', name: 'jetty', version: '6.1.26'
-	compile group: 'org.mortbay.jetty', name: 'jetty-util', version: '6.1.26'
-	compile group: 'javax.servlet', name: 'jsp-api', version: '2.0'
+	provided group: 'javax.servlet', name: 'servlet-api', version: '2.5'
+	provided group: 'org.mortbay.jetty', name: 'jetty', version: '6.1.26'
+	provided group: 'org.mortbay.jetty', name: 'jetty-util', version: '6.1.26'
+	provided group: 'javax.servlet', name: 'jsp-api', version: '2.0'
 
 	//** Framework
 	compile group: 'net.sourceforge.stripes', name: 'stripes', version: '1.5.6'	
@@ -83,14 +83,20 @@ dependencies {
 	//** Testing
 	testCompile 'junit:junit:4.10'
 
-	compile project(":gripersist")
+	compile (project(":gripersist")) {
+		changing: true
+	}
 	
 	compile name: 'stripesstuff', version: '0.1'
 }
 
-eclipseClasspath {	
-	whenConfigured { classpath ->
-		classpath.entries.add(new SourceFolder("/gripersist","",new LinkedHashSet(),"", new ArrayList(), new ArrayList() ))
+eclipse {
+	classpath {	
+		file {
+			whenMerged { classpath ->
+				classpath.entries.add(new SourceFolder("/gripersist","",new LinkedHashSet(),"", new ArrayList(), new ArrayList() ))
+			}
+		}
 	}
 }
 task eclipseCp(dependsOn: eclipseClasspath) {}

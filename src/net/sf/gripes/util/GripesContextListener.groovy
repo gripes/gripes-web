@@ -27,7 +27,8 @@ class GripesContextListener  implements ServletContextListener {
 		
 		def tempStr
 		try { tempStr = context.TEMPDIR } 
-		catch(e) { tempStr = context.getRealPath("/")+"/WEB-INF/work" }		
+		catch(e) { tempStr = context.getRealPath("/")+"/WEB-INF/work" }
+				
 		def tempDir = new File(tempStr)
 		if(!tempDir.exists()){
 			tempDir.mkdirs()
@@ -35,25 +36,33 @@ class GripesContextListener  implements ServletContextListener {
 		}
 		System.setProperty("gripes.temp", tempDir.toString())
 		
-		(new File(this.class.classLoader.getResource(pack.replace(".","/")).getFile())).listFiles().each{
+		(new File(this.class.classLoader.getResource(pack.replace(".","/")).getFile())).listFiles().each {
 			if(it.isFile()) {
-				def klass = Class.forName(pack.replace("/",".")+"."+it.name.replace(".class",""))
-				if(klass && klass.getAnnotation(javax.persistence.Entity)){
-					GripesBaseModel.crudify(klass)
-					
-					//if (klass.newInstance().properties.mappings) {					
-					//	def builder = Class.forName("net.sf.gripes.entity.builder.GripesEntityBuilder").newInstance(klass)
-					//	klass.newInstance().properties.mappings.setDelegate(builder)
-					// 	klass.newInstance().properties.mappings.call()
-					//}
-					
-					/*					
-					if(klass.newInstance().properties.searchable) {
- 						logger.debug "Setting up GripesSearch"
-						def builder = Class.forName("net.sf.gripes.search.builder.GripesSearchBuilder").newInstance(klass)
-						klass.newInstance().properties.searchable.setDelegate(builder)
-						klass.newInstance().properties.searchable.call()
-					}*/
+				try {
+					def klass
+					klass = this.class.classLoader.findClass(pack.replace("/",".")+"."+it.name.replace(".class","")) ?:
+								Class.forName(pack.replace("/",".")+"."+it.name.replace(".class",""))
+
+					if(klass && klass.getAnnotation(javax.persistence.Entity)){
+						GripesBaseModel.crudify(klass)
+						
+						//if (klass.newInstance().properties.mappings) {					
+						//	def builder = Class.forName("net.sf.gripes.entity.builder.GripesEntityBuilder").newInstance(klass)
+						//	klass.newInstance().properties.mappings.setDelegate(builder)
+						// 	klass.newInstance().properties.mappings.call()
+						//}
+						
+						/*					
+						if(klass.newInstance().properties.searchable) {
+	 						logger.debug "Setting up GripesSearch"
+							def builder = Class.forName("net.sf.gripes.search.builder.GripesSearchBuilder").newInstance(klass)
+							klass.newInstance().properties.searchable.setDelegate(builder)
+							klass.newInstance().properties.searchable.call()
+						}*/
+					}
+				} catch (e) {
+					logger.debug e.message
+					logger.debug "Gripes unable to apply CRUD methods to class: ${it}"
 				}
 			}
 		}
