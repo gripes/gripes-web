@@ -34,14 +34,16 @@ class GripesContextListener  implements ServletContextListener {
 			tempDir.mkdirs()
 			tempDir.deleteOnExit()
 		}
-		System.setProperty("gripes.temp", tempDir.toString())
+		context.setAttribute("gripes.temp", tempDir.toString())
 		
 		(new File(this.class.classLoader.getResource(pack.replace(".","/")).getFile())).listFiles().each {
 			if(it.isFile()) {
 				try {
 					def klass
-					klass = this.class.classLoader.findClass(pack.replace("/",".")+"."+it.name.replace(".class","")) ?:
-								Class.forName(pack.replace("/",".")+"."+it.name.replace(".class",""))
+					String klassName = pack.replace("/",".")+"."+it.name.replace(".class","")
+					klass = this.class.classLoader.findLoadedClass(klassName) ?:
+								this.class.classLoader.findClass(klassName) ?:
+									Class.forName(klassName)
 
 					if(klass && klass.getAnnotation(javax.persistence.Entity)){
 						GripesBaseModel.crudify(klass)
