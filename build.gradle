@@ -1,5 +1,6 @@
 import org.gradle.plugins.ide.eclipse.model.SourceFolder
 
+
 apply {
 	plugin 'java'
 	plugin 'groovy'
@@ -10,12 +11,12 @@ logger.quiet "Building Gripes-Web"
 
 group = 'gripes'
 archivesBaseName = 'gripes-web'
-version = '0.1.7'
+version = '0.1.9'
 
 versions = [
-	'gripes-web' : '0.1.7',
-	'gripes-plugin' : '0.1.7',
-	'gripersist' : '0.1.1',
+	'gripes-web' : '0.1.9',
+	'gripes-plugin' : '0.1.10',
+	'gripersist' : '0.1.6',
 	'hibernate-core' : '4.0.0.Beta2'
 ]
 
@@ -83,9 +84,9 @@ dependencies {
 	//** Testing
 	testCompile 'junit:junit:4.10'
 
-	compile (project(":gripersist")) {
-		changing: true
-	}
+//	compile (project(":gripersist")) { changing: true }
+	
+	compile("gripes:gripersist:${versions['gripersist']}")
 	
 	compile name: 'stripesstuff', version: '0.1'
 }
@@ -94,7 +95,7 @@ eclipse {
 	classpath {	
 		file {
 			whenMerged { classpath ->
-				classpath.entries.add(new SourceFolder("/gripersist","",new LinkedHashSet(),"", new ArrayList(), new ArrayList() ))
+				classpath.entries.add(new SourceFolder("/gripersist",""))
 			}
 		}
 	}

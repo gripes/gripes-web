@@ -72,25 +72,37 @@ class GripesContextListener  implements ServletContextListener {
 		def contextHelper = context.getServerInfo().contains("Tomcat")?(new TomcatContextHelper(context)):(new JettyContextHelper(context))
 		logger.debug "ContextHelper: $contextHelper"
 		
-		// TODO need to compensate for the Catalina method of implementing these Filters
-		// TODO only use the /gripes-addons/ directory when addon is config'd with "-src"
+		// TODO? only use the /gripes-addons/ directory when addon is config'd with "-src"
+		// TODO Just find all addon.gradle files instead of Config.groovy
 		def gripesConfig = new ConfigSlurper().parse(this.class.classLoader.getResource("Config.groovy").text)
 		context.setAttribute "GripesConfig", gripesConfig
 		
-		gripesConfig.addons.each {
-			def addonName = it
+		Enumeration<URL> allResources = getClass().getClassLoader().getResources("META-INF/gripes/gripes.properties");
+		logger.debug "All URLs {}", allResources
+		
+		String jarBase		
+		allResources.each {
+			def addonProps = new ConfigSlurper().parse(it.text)
 
-			def addonStartup = GripesHelper.findAddonStartup(addonName)
-
-			if(addonStartup) {
+			def addonName = addonProps.addon
+			logger.debug "File: " + (new File(it.getFile()).canonicalPath)
+			jarBase  = (it.getFile()=~/(.*?)\.jar/)[0][0]
+			logger.debug "URL: {}" , jarBase
+			
+			// Find the gripes.addon that has same JAR Path
+			def startup = getClass().classLoader.getResources("gripes.startup").find {
+				it.getFile().startsWith(jarBase)
+			}
+			if(startup) {
 				logger.debug "Running addon startup script"
 				def shell = new GroovyShell(this.class.classLoader, new Binding([entityPackage: pack]))
-				shell.evaluate(addonStartup)
+				shell.evaluate(startup.text)
 			}
-
-			def addonConfig = GripesHelper.findAddonConfig(addonName)
-								
-			def addon = new ConfigSlurper().parse(addonConfig)
+			
+			def addonConfig = getClass().classLoader.getResource("gripes.addon").find { 
+				it.getFile().startsWith(jarBase)
+			}								
+			def addon = new ConfigSlurper().parse(addonConfig.text)
 			addon.filters.each {k,v ->
 				def filterConfig = v
 				def holder = contextHelper.getFilter(k)
@@ -106,11 +118,11 @@ class GripesContextListener  implements ServletContextListener {
 						dispatches : FilterHolder.dispatch(filterConfig.dispatch)
 					)
 
-					contextHelper.addFilter(holder,mapping)	
-				}	
+					contextHelper.addFilter(holder,mapping)
+				}
 				filterConfig.params.each {kk,vv ->
 					logger.debug "The {} addon is updating the {} param for the {}", addonName, kk, k
-					if(vv.startsWith("+")) 
+					if(vv.startsWith("+"))
 						holder.setInitParameter(kk,holder.getInitParameter(kk)+","+vv[1..vv.length()-1])
 					else
 						holder.setInitParameter(kk,vv)
